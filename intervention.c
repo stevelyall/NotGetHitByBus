@@ -40,6 +40,7 @@ unsigned int button_c_state = 1;
 unsigned int light_a_state = 1; //0: on 1: off
 unsigned int light_b_state = 1;
 unsigned int light_c_state = 1;
+unsigned int flash_all = 1; //1: do 0: don't
 
 void init()
 {
@@ -74,6 +75,19 @@ void init()
     INTEnableSystemMultiVectoredInt();
 }
 
+void startFlashing()
+{
+    DBPRINTF("Start flashing!\n");
+    flash_all = 1;
+    OpenCoreTimer(CORE_TICK_RATE);
+}
+
+void stopFlashing()
+{
+    DBPRINTF("Stop flashing!\n");
+    flash_all = 0;
+}
+
 void watchButtons()
 {
     //Polling for button change
@@ -86,15 +100,22 @@ void watchButtons()
             {
                 DBPRINTF("BUTTON C has been pressed. \n");
                 button_c_state = 0;
+
+                if (flash_all)
+                {
+                    stopFlashing();
+                }
+                else
+                {
+                    startFlashing();
+                }
             }
         }
         else // 1 = switch is not pressed
         {
             if(button_c_state == 0) //State just changed
             {
-                DBPRINTF("BUTTON C has been released. \n");
                 button_c_state = 1;
-                OpenCoreTimer(CORE_TICK_RATE);
             }
         }
     };
@@ -122,10 +143,33 @@ void __ISR(_CORE_TIMER_VECTOR, ipl2) CoreTimerHandler(void)
     // Toggle the LEDs
     mPORTDToggleBits(BIT_0 | BIT_1 | BIT_2);
 
-    // update the period
-    if (button_c_state == 1)
+    if (light_a_state) //Assuming that if A is on, B and C are too
+    {
+        light_a_state = 0;
+        light_b_state = 0;
+        light_c_state = 0;
+    }
+    else
+    {
+        light_a_state = 1;
+        light_b_state = 1;
+        light_c_state = 1;
+    }
+
+    // Continue flashing
+    if (flash_all)
     {
         UpdateCoreTimer(CORE_TICK_RATE);
+    }
+    else
+    {
+        if (light_a_state) //All lights are currently on
+        {
+            mPORTDToggleBits(BIT_0 | BIT_1 | BIT_2);
+            light_a_state = 0;
+            light_b_state = 0;
+            light_c_state = 0;
+        }
     }
 
     // Clear interrupt flag
