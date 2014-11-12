@@ -33,14 +33,23 @@
 #define PULLUPS         (CN15_PULLUP_ENABLE | CN16_PULLUP_ENABLE)
 #define INTERRUPT       (CHANGE_INT_ON | CHANGE_INT_PRI_2)
 
-unsigned int allowFlash = 1;
+//0 -> A, 1 -> B, 2 -> C
+unsigned int button_states[3]; //0: pressed 1: unpressed
+unsigned int light_states[3]; //0: on 1: off
+unsigned int flash_all; //1: do 0: don't
 
-//  port_io application code
-int main(void)
+void init()
 {
-    unsigned int last_sw_state = 1;
+    //Set up button and light states
+    int i;
+    for (i = 0; i < 3; i++)
+    {
+        button_states[i] = 1;
+        light_states[i] = 0;
+    }
+    flash_all = 1; //Start flashing
 
-    //make debugger do
+    // Make debugger do
     DBINIT();
 
     // Configure the device for maximum performance, but do not change the PBDIV clock divisor.
@@ -68,33 +77,57 @@ int main(void)
 
     // enable device multi-vector interrupts
     INTEnableSystemMultiVectoredInt();
+}
 
+void startFlashing()
+{
+    DBPRINTF("Start flashing!\n"); //DBPRINTF should be working
+    flash_all = 1;
+    OpenCoreTimer(CORE_TICK_RATE);
+}
 
+void stopFlashing()
+{
+    DBPRINTF("Stop flashing!\n");
+    flash_all = 0;
+}
 
+void watchButtons()
+{
     //Polling for button change
     while(1)
     {
-        // Button C
-        if(PORTDbits.RD6 == 0)					// 0 = switch is pressed
+        // BUTTON C
+        if(PORTDbits.RD6 == 0) // 0 = switch is pressed
         {
-            if(last_sw_state == 1)					// display a message only when switch changes state
+            if(button_states[2] == 1) //State just changed
             {
-                DBPRINTF("Switch SW1 has been pressed. \n");
-                last_sw_state = 0;
+                button_states[2] = 0;
+                if (flash_all)
+                {
+                    stopFlashing();
+                }
+                else
+                {
+                    startFlashing();
+                }
             }
         }
-        else										// 1 = switch is not pressed
+        else // 1 = switch is not pressed
         {
-            if(last_sw_state == 0)                 // display a message only when switch changes state
+            if(button_states[2] == 0) //State just changed
             {
-                DBPRINTF("Switch SW1 has been released. \n");
-                last_sw_state = 1;
+                button_states[2] = 1;
             }
         }
-
-
     };
+}
 
+//  port_io application code
+int main(void)
+{
+    init();
+    watchButtons();
 }
 
 /*
@@ -109,14 +142,35 @@ int main(void)
 ******************************************************************************/
 void __ISR(_CORE_TIMER_VECTOR, ipl2) CoreTimerHandler(void)
 {
-    // .. things to do
+    if (flash_all)
+    {
+        // Start next iteration
+        UpdateCoreTimer(CORE_TICK_RATE);
+    }
 
-    // .. Toggle the LEDs
-    mPORTDToggleBits(BIT_0 | BIT_1 | BIT_2);
+    if (flash_all || light_states[0])
+    {
+        DBPRINTF("Toggling buttons from %d!\n", light_states[0]);
+        // Toggle the LEDs
+        mPORTDToggleBits(BIT_0 | BIT_1 | BIT_2);
 
-    // update the period
-    UpdateCoreTimer(CORE_TICK_RATE);
+        int i;
+        if (light_states[0]) //Assuming that if A is on, B and C are too
+        {
+            for (i = 0; i < 3; i++)
+            {
+                light_states[i] = 0;
+            }
+        }
+        else
+        {
+            for (i = 0; i < 3; i++)
+            {
+                light_states[i] = 1;
+            }
+        }
+    }
 
-    // clear the interrupt flag
+    //Clear interrupt flag
     mCTClearIntFlag();
 }
