@@ -25,7 +25,7 @@
 //  The following is used by the main application
 #define SYS_FREQ		(80000000)
 #define TOGGLES_PER_SEC			5
-#define CORE_TICK_RATE	        64000000//(SYS_FREQ/2/TOGGLES_PER_SEC) MITCH
+#define CORE_TICK_RATE	        16000000//(SYS_FREQ/2/TOGGLES_PER_SEC) MITCH
 
 // IOPORT bit masks can be found in ports.h
 #define CONFIG          (CN_ON)
@@ -37,9 +37,9 @@ unsigned int button_a_state = 1; //0: pressed 1: unpressed
 unsigned int button_b_state = 1;
 unsigned int button_c_state = 1;
 
-unsigned int light_a_state = 1; //0: on 1: off
-unsigned int light_b_state = 1;
-unsigned int light_c_state = 1;
+unsigned int light_a_state = 0; //0: on 1: off
+unsigned int light_b_state = 0;
+unsigned int light_c_state = 0;
 unsigned int flash_all = 1; //1: do 0: don't
 
 void init()
