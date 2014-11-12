@@ -33,17 +33,22 @@
 #define PULLUPS         (CN15_PULLUP_ENABLE | CN16_PULLUP_ENABLE)
 #define INTERRUPT       (CHANGE_INT_ON | CHANGE_INT_PRI_2)
 
-unsigned int button_a_state = 1; //0: pressed 1: unpressed
-unsigned int button_b_state = 1;
-unsigned int button_c_state = 1;
-
-unsigned int light_a_state = 0; //0: on 1: off
-unsigned int light_b_state = 0;
-unsigned int light_c_state = 0;
-unsigned int flash_all = 1; //1: do 0: don't
+//0 -> A, 1 -> B, 2 -> C
+unsigned int button_states[3]; //0: pressed 1: unpressed
+unsigned int light_states[3]; //0: on 1: off
+unsigned int flash_all; //1: do 0: don't
 
 void init()
 {
+    //Set up button and light states
+    int i;
+    for (i = 0; i < 3; i++)
+    {
+        button_states[i] = 1;
+        light_states[i] = 0;
+    }
+    flash_all = 1; //Start flashing
+
     // Make debugger do
     DBINIT();
 
@@ -95,10 +100,9 @@ void watchButtons()
         // BUTTON C
         if(PORTDbits.RD6 == 0) // 0 = switch is pressed
         {
-            if(button_c_state == 1) //State just changed
+            if(button_states[2] == 1) //State just changed
             {
-                button_c_state = 0;
-
+                button_states[2] = 0;
                 if (flash_all)
                 {
                     stopFlashing();
@@ -111,9 +115,9 @@ void watchButtons()
         }
         else // 1 = switch is not pressed
         {
-            if(button_c_state == 0) //State just changed
+            if(button_states[2] == 0) //State just changed
             {
-                button_c_state = 1;
+                button_states[2] = 1;
             }
         }
     };
@@ -138,38 +142,35 @@ int main(void)
 ******************************************************************************/
 void __ISR(_CORE_TIMER_VECTOR, ipl2) CoreTimerHandler(void)
 {
-    // Toggle the LEDs
-    mPORTDToggleBits(BIT_0 | BIT_1 | BIT_2);
-
-    if (light_a_state) //Assuming that if A is on, B and C are too
-    {
-        light_a_state = 0;
-        light_b_state = 0;
-        light_c_state = 0;
-    }
-    else
-    {
-        light_a_state = 1;
-        light_b_state = 1;
-        light_c_state = 1;
-    }
-
-    // Continue flashing
     if (flash_all)
     {
+        // Start next iteration
         UpdateCoreTimer(CORE_TICK_RATE);
     }
-    else
+
+    if (flash_all || light_states[0])
     {
-        if (light_a_state) //All lights are currently on
+        DBPRINTF("Toggling buttons from %d!\n", light_states[0]);
+        // Toggle the LEDs
+        mPORTDToggleBits(BIT_0 | BIT_1 | BIT_2);
+
+        int i;
+        if (light_states[0]) //Assuming that if A is on, B and C are too
         {
-            mPORTDToggleBits(BIT_0 | BIT_1 | BIT_2);
-            light_a_state = 0;
-            light_b_state = 0;
-            light_c_state = 0;
+            for (i = 0; i < 3; i++)
+            {
+                light_states[i] = 0;
+            }
+        }
+        else
+        {
+            for (i = 0; i < 3; i++)
+            {
+                light_states[i] = 1;
+            }
         }
     }
 
-    // Clear interrupt flag
+    //Clear interrupt flag
     mCTClearIntFlag();
 }
