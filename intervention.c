@@ -33,7 +33,13 @@
 #define PULLUPS         (CN15_PULLUP_ENABLE | CN16_PULLUP_ENABLE)
 #define INTERRUPT       (CHANGE_INT_ON | CHANGE_INT_PRI_2)
 
-unsigned int button_c_state = 1; //0: off, 1: on
+unsigned int button_a_state = 1; //0: pressed 1: unpressed
+unsigned int button_b_state = 1;
+unsigned int button_c_state = 1;
+
+unsigned int light_a_state = 1; //0: on 1: off
+unsigned int light_b_state = 1;
+unsigned int light_c_state = 1;
 
 void init()
 {
@@ -113,7 +119,6 @@ int main(void)
 ******************************************************************************/
 void __ISR(_CORE_TIMER_VECTOR, ipl2) CoreTimerHandler(void)
 {
-    DBPRINTF("Toggling?\n");
     // Toggle the LEDs
     mPORTDToggleBits(BIT_0 | BIT_1 | BIT_2);
 
@@ -123,6 +128,6 @@ void __ISR(_CORE_TIMER_VECTOR, ipl2) CoreTimerHandler(void)
         UpdateCoreTimer(CORE_TICK_RATE);
     }
 
-    // clear the interrupt flag
+    // Clear interrupt flag
     mCTClearIntFlag();
 }
