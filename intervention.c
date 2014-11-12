@@ -33,15 +33,13 @@
 #define PULLUPS         (CN15_PULLUP_ENABLE | CN16_PULLUP_ENABLE)
 #define INTERRUPT       (CHANGE_INT_ON | CHANGE_INT_PRI_2)
 
-unsigned int allowFlash = 1;
+unsigned int last_sw_state = 1;
 
-//  port_io application code
-int main(void)
+void init()
 {
-    unsigned int last_sw_state = 1;
-
-    //make debugger do
+    // Make debugger do
     DBINIT();
+    DBPRINTF("CORE_TICK_RATE:%d\n", CORE_TICK_RATE); //By the way, this _is_ working for me
 
     // Configure the device for maximum performance, but do not change the PBDIV clock divisor.
     // Given the options, this function will change the program Flash wait states,
@@ -68,9 +66,10 @@ int main(void)
 
     // enable device multi-vector interrupts
     INTEnableSystemMultiVectoredInt();
+}
 
-
-
+void watchButtons()
+{
     //Polling for button change
     while(1)
     {
@@ -89,12 +88,17 @@ int main(void)
             {
                 DBPRINTF("Switch SW1 has been released. \n");
                 last_sw_state = 1;
+                init();
             }
         }
-
-
     };
+}
 
+//  port_io application code
+int main(void)
+{
+    init();
+    watchButtons();
 }
 
 /*
@@ -109,13 +113,15 @@ int main(void)
 ******************************************************************************/
 void __ISR(_CORE_TIMER_VECTOR, ipl2) CoreTimerHandler(void)
 {
-    // .. things to do
-
-    // .. Toggle the LEDs
+    DBPRINTF("Toggling?\n");
+    // Toggle the LEDs
     mPORTDToggleBits(BIT_0 | BIT_1 | BIT_2);
 
     // update the period
-    UpdateCoreTimer(CORE_TICK_RATE);
+    if (last_sw_state == 1)
+    {
+        UpdateCoreTimer(32000000);
+    }
 
     // clear the interrupt flag
     mCTClearIntFlag();
