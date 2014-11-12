@@ -5,8 +5,9 @@ Help Billy cross the street without dying. Traffic light thing on PIC32 microcon
 
 ====================
 Project Description
-@author mitch9654
 ====================
+@author mitch9654
+
 Our project will emulate a traffic light system at a crosswalk. When a user pushes the button to cross the road, the traffic light system should change to yellow after a delay, then red, then back to green.
 
 Project Criteria
