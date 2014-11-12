@@ -42,27 +42,25 @@ int main(void)
 
     //make debugger do
     DBINIT();
-   
-    DBPUTS("Program termiderpd. Click HALT and then RESET to stop the microcontroller. \n");
-    
-    // Configure the device for maximum performance, but do not change the PBDIV clock divisor.
-	// Given the options, this function will change the program Flash wait states,
-	// RAM wait state and enable prefetch cache, but will not change the PBDIV.
-    // The PBDIV value is already set via the pragma FPBDIV option above.
-   	SYSTEMConfig(SYS_FREQ, SYS_CFG_WAIT_STATES | SYS_CFG_PCACHE);
 
-	// configure IOPORTS PORTD.RD0, RD1, RD2 as outputs (LEDs)
-	// could also use mPORTDSetPinsDigitalOut(BIT_6 | BIT_7);
+    // Configure the device for maximum performance, but do not change the PBDIV clock divisor.
+    // Given the options, this function will change the program Flash wait states,
+    // RAM wait state and enable prefetch cache, but will not change the PBDIV.
+    // The PBDIV value is already set via the pragma FPBDIV option above.
+    SYSTEMConfig(SYS_FREQ, SYS_CFG_WAIT_STATES | SYS_CFG_PCACHE);
+
+    // configure IOPORTS PORTD.RD0, RD1, RD2 as outputs (LEDs)
+    // could also use mPORTDSetPinsDigitalOut(BIT_6 | BIT_7);
     PORTSetPinsDigitalOut(IOPORT_D, BIT_0 | BIT_1 | BIT_2);
 
-	// initialize the port pins states = output low
+    // initialize the port pins states = output low
     PORTClearBits(IOPORT_D, BIT_0 | BIT_1 | BIT_2);
 
-	// PORTD.RD6, RD7, 13 as inputs (these are the switches)
-	// could also use mPORTDSetPinsDigitalIn(BIT_6 | BIT_7);
+    // PORTD.RD6, RD7, 13 as inputs (these are the switches)
+    // could also use mPORTDSetPinsDigitalIn(BIT_6 | BIT_7);
     PORTSetPinsDigitalIn(IOPORT_D, BIT_6 | BIT_7 | BIT_13);
 
-        // configure the core timer roll-over rate (100msec)
+    // configure the core timer roll-over rate (100msec)
     OpenCoreTimer(CORE_TICK_RATE);
 
     // set up the core timer interrupt with a prioirty of 2 and zero sub-priority
@@ -72,37 +70,35 @@ int main(void)
     INTEnableSystemMultiVectoredInt();
 
 
-  
-    // loop here polling for SW1
-   while(1)
-   {
 
-          // switch 1
-          if(PORTDbits.RD6 == 0)					// 0 = switch is pressed
- 	  {
-              
- 	  	if(last_sw_state == 1)					// display a message only when switch changes state
-		{
- 	  	    DBPRINTF("Switch SW1 has been pressed. \n");
- 	  	    last_sw_state = 0;
- 	  	}
- 	  }
- 	  else										// 1 = switch is not pressed
- 	  {
- 	  	if(last_sw_state == 0)                 // display a message only when switch changes state
- 	  	{
- 	  	    DBPRINTF("Switch SW1 has been released. \n");
- 	  	    last_sw_state = 1;
+    //Polling for button change
+    while(1)
+    {
+        // Button C
+        if(PORTDbits.RD6 == 0)					// 0 = switch is pressed
+        {
+            if(last_sw_state == 1)					// display a message only when switch changes state
+            {
+                DBPRINTF("Switch SW1 has been pressed. \n");
+                last_sw_state = 0;
+            }
         }
- 	  }
+        else										// 1 = switch is not pressed
+        {
+            if(last_sw_state == 0)                 // display a message only when switch changes state
+            {
+                DBPRINTF("Switch SW1 has been released. \n");
+                last_sw_state = 1;
+            }
+        }
 
 
-   };
-   
+    };
+
 }
 
 /*
- * Makes all three lights flash
+* Makes all three lights flash
 ******************************************************************************
 *	Change Notice Interrupt Service Routine
 *
@@ -115,7 +111,7 @@ void __ISR(_CORE_TIMER_VECTOR, ipl2) CoreTimerHandler(void)
 {
     // .. things to do
 
-	// .. Toggle the LEDs
+    // .. Toggle the LEDs
     mPORTDToggleBits(BIT_0 | BIT_1 | BIT_2);
 
     // update the period
