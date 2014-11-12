@@ -25,7 +25,7 @@
 //  The following is used by the main application
 #define SYS_FREQ		(80000000)
 #define TOGGLES_PER_SEC			5
-#define CORE_TICK_RATE	        16000000//(SYS_FREQ/2/TOGGLES_PER_SEC) MITCH
+#define CORE_TICK_RATE	        (SYS_FREQ/2/TOGGLES_PER_SEC)
 
 // IOPORT bit masks can be found in ports.h
 #define CONFIG          (CN_ON)
@@ -46,7 +46,6 @@ void init()
 {
     // Make debugger do
     DBINIT();
-    DBPRINTF("CORE_TICK_RATE:%d\n", CORE_TICK_RATE); //By the way, this _is_ working for me
 
     // Configure the device for maximum performance, but do not change the PBDIV clock divisor.
     // Given the options, this function will change the program Flash wait states,
@@ -77,7 +76,7 @@ void init()
 
 void startFlashing()
 {
-    DBPRINTF("Start flashing!\n");
+    DBPRINTF("Start flashing!\n"); //DBPRINTF should be working
     flash_all = 1;
     OpenCoreTimer(CORE_TICK_RATE);
 }
@@ -98,7 +97,6 @@ void watchButtons()
         {
             if(button_c_state == 1) //State just changed
             {
-                DBPRINTF("BUTTON C has been pressed. \n");
                 button_c_state = 0;
 
                 if (flash_all)
