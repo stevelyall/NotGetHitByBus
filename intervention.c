@@ -25,7 +25,7 @@
 //  The following is used by the main application
 #define SYS_FREQ		(80000000)
 #define TOGGLES_PER_SEC			5
-#define CORE_TICK_RATE	        (SYS_FREQ/2/TOGGLES_PER_SEC)
+#define CORE_TICK_RATE	        64000000//(SYS_FREQ/2/TOGGLES_PER_SEC) MITCH
 
 // IOPORT bit masks can be found in ports.h
 #define CONFIG          (CN_ON)
@@ -33,7 +33,7 @@
 #define PULLUPS         (CN15_PULLUP_ENABLE | CN16_PULLUP_ENABLE)
 #define INTERRUPT       (CHANGE_INT_ON | CHANGE_INT_PRI_2)
 
-unsigned int last_sw_state = 1;
+unsigned int button_c_state = 1; //0: off, 1: on
 
 void init()
 {
@@ -73,22 +73,22 @@ void watchButtons()
     //Polling for button change
     while(1)
     {
-        // Button C
-        if(PORTDbits.RD6 == 0)					// 0 = switch is pressed
+        // BUTTON C
+        if(PORTDbits.RD6 == 0) // 0 = switch is pressed
         {
-            if(last_sw_state == 1)					// display a message only when switch changes state
+            if(button_c_state == 1) //State just changed
             {
-                DBPRINTF("Switch SW1 has been pressed. \n");
-                last_sw_state = 0;
+                DBPRINTF("BUTTON C has been pressed. \n");
+                button_c_state = 0;
             }
         }
-        else										// 1 = switch is not pressed
+        else // 1 = switch is not pressed
         {
-            if(last_sw_state == 0)                 // display a message only when switch changes state
+            if(button_c_state == 0) //State just changed
             {
-                DBPRINTF("Switch SW1 has been released. \n");
-                last_sw_state = 1;
-                init();
+                DBPRINTF("BUTTON C has been released. \n");
+                button_c_state = 1;
+                OpenCoreTimer(CORE_TICK_RATE);
             }
         }
     };
@@ -118,9 +118,9 @@ void __ISR(_CORE_TIMER_VECTOR, ipl2) CoreTimerHandler(void)
     mPORTDToggleBits(BIT_0 | BIT_1 | BIT_2);
 
     // update the period
-    if (last_sw_state == 1)
+    if (button_c_state == 1)
     {
-        UpdateCoreTimer(32000000);
+        UpdateCoreTimer(CORE_TICK_RATE);
     }
 
     // clear the interrupt flag
