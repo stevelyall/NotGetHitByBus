@@ -37,6 +37,7 @@
 unsigned int button_states[3]; //0: pressed 1: unpressed
 unsigned int light_states[3]; //0: on 1: off
 unsigned int flash_all; //1: do 0: don't
+unsigned int green_mode; //1: green light condition 0: not
 
 void init()
 {
@@ -48,6 +49,7 @@ void init()
         light_states[i] = 0;
     }
     flash_all = 1; //Start flashing
+    green_mode = 0; // light isn't green
 
     // Make debugger do
     DBINIT();
@@ -92,6 +94,42 @@ void stopFlashing()
     flash_all = 0;
 }
 
+void greenModeOn() {
+    green_mode = 1;
+
+    // turn green LED ON
+    PORTSetBits(IOPORT_D, BIT_2);
+    light_states[0] = 0;
+
+    // ensure yellow LED OFF
+    PORTClearBits(IOPORT_D, BIT_1);
+    light_states[1] = 1;
+
+    // ensure red LED OFF
+    PORTClearBits(IOPORT_D, BIT_0);
+    light_states[2] = 1;
+
+    DBPRINTF("Green light mode on\n");
+}
+
+void greenModeOff() {
+    green_mode = 0;
+
+    // turn green LED OFF
+    PORTClearBits(IOPORT_D, BIT_2);
+    light_states[0] = 1;
+
+    // ensure yellow LED OFF
+    PORTClearBits(IOPORT_D, BIT_1);
+    light_states[1] = 1;
+
+    // ensure red LED OFF
+    PORTClearBits(IOPORT_D, BIT_0);
+    light_states[2] = 1;
+
+    DBPRINTF("Green light mode off\n");
+}
+
 void watchButtons()
 {
     //Polling for button change
@@ -118,6 +156,35 @@ void watchButtons()
             if(button_states[2] == 0) //State just changed
             {
                 button_states[2] = 1;
+            }
+        }
+
+        // BUTTON A
+        if(PORTDbits.RD13 == 0) // 0 = switch is pressed
+        {
+            if(button_states[0] == 1) //State just changed
+            {
+                button_states[0] = 0;
+                if (flash_all) // lights are flashing, stop flashing and set green condition
+                {
+                   stopFlashing();
+                   greenModeOn();
+                   
+                }
+                if (green_mode) {   // green condition, turn it off
+                    greenModeOff();
+                }
+                else
+                {
+                    greenModeOn(); // start green condition
+                }
+            }
+        }
+        else // 1 = switch is not pressed
+        {
+            if(button_states[0] == 0) //State just changed
+            {
+                button_states[0] = 1;
             }
         }
     };
@@ -150,7 +217,7 @@ void __ISR(_CORE_TIMER_VECTOR, ipl2) CoreTimerHandler(void)
 
     if (flash_all || light_states[0])
     {
-        DBPRINTF("Toggling buttons from %d!\n", light_states[0]);
+        DBPRINTF("Toggling lights from %d!\n", light_states[0]);
         // Toggle the LEDs
         mPORTDToggleBits(BIT_0 | BIT_1 | BIT_2);
 
