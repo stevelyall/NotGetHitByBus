@@ -1,5 +1,4 @@
 timer_interrupt - PIC32 Starter Kit.X/
-
 Makefile
 
 nbproject/configurations.xml
@@ -9,3 +8,7 @@ nbproject/configurations.xml
 *.properties
 
 *.bash
+build/
+dist/
+nbproject/
+timer_interrupt - PIC32 Starter Kit.X/Makefile
