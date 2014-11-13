@@ -33,7 +33,8 @@
 #define PULLUPS         (CN15_PULLUP_ENABLE | CN16_PULLUP_ENABLE)
 #define INTERRUPT       (CHANGE_INT_ON | CHANGE_INT_PRI_2)
 
-//0 -> A, 1 -> B, 2 -> C
+//0 -> Bottom, 1 -> Middle, 2 -> Top
+//0 -> Red,    1 -> Yellow, 2 -> Green
 unsigned int button_states[3]; //0: pressed 1: unpressed
 unsigned int light_states[3]; //0: on 1: off
 unsigned int flash_all; //1: do 0: don't
@@ -84,8 +85,10 @@ void init()
 void startFlashing()
 {
     DBPRINTF("Start flashing!\n"); //DBPRINTF should be working
+    green_mode = 0;
     flash_all = 1;
     OpenCoreTimer(CORE_TICK_RATE);
+    mConfigIntCoreTimer((CT_INT_ON | CT_INT_PRIOR_2 | CT_INT_SUB_PRIOR_0));
 }
 
 void stopFlashing()
@@ -96,6 +99,7 @@ void stopFlashing()
 
 void greenModeOn() {
     green_mode = 1;
+    flash_all = 0;
 
     // turn green LED ON
     PORTSetBits(IOPORT_D, BIT_2);
@@ -108,6 +112,8 @@ void greenModeOn() {
     // ensure red LED OFF
     PORTClearBits(IOPORT_D, BIT_0);
     light_states[2] = 1;
+
+    CloseCoreTimer();
 
     DBPRINTF("Green light mode on\n");
 }
@@ -209,6 +215,7 @@ int main(void)
 ******************************************************************************/
 void __ISR(_CORE_TIMER_VECTOR, ipl2) CoreTimerHandler(void)
 {
+    DBPRINTF("Interrupt Do\n");
     if (flash_all)
     {
         // Start next iteration
