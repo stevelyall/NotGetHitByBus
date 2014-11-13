@@ -1,1 +1,11 @@
 timer_interrupt - PIC32 Starter Kit.X/
+
+Makefile
+
+nbproject/configurations.xml
+
+*.mk
+
+*.properties
+
+*.bash
