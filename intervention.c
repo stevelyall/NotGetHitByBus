@@ -106,23 +106,40 @@ void stopFlashing()
 {
     DBPRINTF("Stop flashing!\n");
     flash_all = 0;
+
+     //Assuming that if A is on, B and C are too
+     if (light_states[0])
+     {
+         int i;
+         for (i = 0; i < 3; i++) //all lights set off
+          {
+            light_states[i] = 0;
+          }
+          
+          // turn all LEDs OFF
+          PORTClearBits(IOPORT_D, BIT_0);
+          PORTClearBits(IOPORT_D, BIT_1);
+          PORTClearBits(IOPORT_D, BIT_2);
+     }
+
 }
 
 void greenModeOn() {
     green_mode = 1;
     flash_all = 0;
+    interrupt_mode = 0; // interrupts aren't needed
 
     // turn green LED ON
     PORTSetBits(IOPORT_D, BIT_2);
-    light_states[0] = 0;
+    light_states[0] = 1;
 
     // ensure yellow LED OFF
     PORTClearBits(IOPORT_D, BIT_1);
-    light_states[1] = 1;
+    light_states[1] = 0;
 
     // ensure red LED OFF
     PORTClearBits(IOPORT_D, BIT_0);
-    light_states[2] = 1;
+    light_states[2] = 0;
 
     CloseCoreTimer();
 
@@ -132,17 +149,16 @@ void greenModeOn() {
 void greenModeOff() {
     green_mode = 0;
 
-    // turn green LED OFF
-    PORTClearBits(IOPORT_D, BIT_2);
-    light_states[0] = 1;
+    int i;
+         for (i = 0; i < 3; i++) //all lights set off
+          {
+            light_states[i] = 0;
+          }
 
-    // ensure yellow LED OFF
-    PORTClearBits(IOPORT_D, BIT_1);
-    light_states[1] = 1;
-
-    // ensure red LED OFF
-    PORTClearBits(IOPORT_D, BIT_0);
-    light_states[2] = 1;
+          // turn all LEDs OFF
+          PORTClearBits(IOPORT_D, BIT_0);
+          PORTClearBits(IOPORT_D, BIT_1);
+          PORTClearBits(IOPORT_D, BIT_2);
 
     DBPRINTF("Green light mode off\n");
 }
@@ -186,7 +202,7 @@ void watchButtons()
                 {
                    stopFlashing();
                    greenModeOn();
-                   
+
                 }
                 if (green_mode) {   // green condition, turn it off
                     greenModeOff();
