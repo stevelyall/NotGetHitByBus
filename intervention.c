@@ -94,10 +94,10 @@ void init()
 void startFlashing()
 {
     DBPRINTF("Start flashing!\n"); //DBPRINTF should be working
-    green_mode = 0;
     // set flashing mode and interrupt handler for do flashing
     flash_all = 1;
     interrupt_mode = 1;
+    greenModeOff(); // turn green light mode off
     OpenCoreTimer(CORE_TICK_RATE);
     mConfigIntCoreTimer((CT_INT_ON | CT_INT_PRIOR_2 | CT_INT_SUB_PRIOR_0));
 }
