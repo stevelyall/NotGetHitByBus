@@ -24,8 +24,8 @@
 
 //  The following is used by the main application
 #define SYS_FREQ		(80000000)
-#define TOGGLES_PER_SEC			5
-#define CORE_TICK_RATE	        (SYS_FREQ/2/TOGGLES_PER_SEC)
+#define TOGGLES_PER_SEC			7
+#define CORE_TICK_RATE	        (SYS_FREQ/TOGGLES_PER_SEC)
 
 // IOPORT bit masks can be found in ports.h
 #define CONFIG          (CN_ON)
@@ -121,13 +121,14 @@ void stopFlashing()
           PORTClearBits(IOPORT_D, BIT_1);
           PORTClearBits(IOPORT_D, BIT_2);
      }
-
 }
 
 void greenModeOn() {
+    CloseCoreTimer();
+
     green_mode = 1;
     flash_all = 0;
-    interrupt_mode = 0; // interrupts aren't needed
+    interrupt_mode = 0; // interrupts shouldn't do anything
 
     // turn green LED ON
     PORTSetBits(IOPORT_D, BIT_2);
@@ -140,8 +141,6 @@ void greenModeOn() {
     // ensure red LED OFF
     PORTClearBits(IOPORT_D, BIT_0);
     light_states[2] = 0;
-
-    CloseCoreTimer();
 
     DBPRINTF("Green light mode on\n");
 }
@@ -198,13 +197,14 @@ void watchButtons()
             if(button_states[0] == 1) //State just changed
             {
                 button_states[0] = 0;
+                DBPRINTF("Green button pressed\n");
                 if (flash_all) // lights are flashing, stop flashing and set green condition
                 {
-                   stopFlashing();
-                   greenModeOn();
+                    greenModeOn();
+                    //stopFlashing();
 
                 }
-                if (green_mode) {   // green condition, turn it off
+                else if (green_mode) {   // green condition, turn it off
                     greenModeOff();
                 }
                 else
@@ -217,6 +217,7 @@ void watchButtons()
         {
             if(button_states[0] == 0) //State just changed
             {
+                DBPRINTF("BUTTON UNPRESSED YO\n");
                 button_states[0] = 1;
             }
         }
@@ -242,7 +243,7 @@ int main(void)
 ******************************************************************************/
 void __ISR(_CORE_TIMER_VECTOR, ipl2) CoreTimerHandler(void)
 {
-    DBPRINTF("Interrupt Do ");
+    DBPRINTF("Interrupt Do\n");
 
     switch (interrupt_mode) {
 
