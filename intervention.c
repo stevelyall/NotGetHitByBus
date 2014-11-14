@@ -40,6 +40,13 @@ unsigned int light_states[3]; //0: on 1: off
 unsigned int flash_all; //1: do 0: don't
 unsigned int green_mode; //1: green light condition 0: not
 
+// 0: none
+// 1: interrupt handler for flashing mode
+// 2: interrupt handler for yellow-red
+// 3: interrupt handler for red-green
+
+unsigned int interrupt_mode; 
+
 void init()
 {
     //Set up button and light states
@@ -49,7 +56,9 @@ void init()
         button_states[i] = 1;
         light_states[i] = 0;
     }
+
     flash_all = 1; //Start flashing
+    interrupt_mode = 1; // tell interrupt handler to use flashing case
     green_mode = 0; // light isn't green
 
     // Make debugger do
@@ -86,7 +95,9 @@ void startFlashing()
 {
     DBPRINTF("Start flashing!\n"); //DBPRINTF should be working
     green_mode = 0;
+    // set flashing mode and interrupt handler for do flashing
     flash_all = 1;
+    interrupt_mode = 1;
     OpenCoreTimer(CORE_TICK_RATE);
     mConfigIntCoreTimer((CT_INT_ON | CT_INT_PRIOR_2 | CT_INT_SUB_PRIOR_0));
 }
@@ -215,36 +226,70 @@ int main(void)
 ******************************************************************************/
 void __ISR(_CORE_TIMER_VECTOR, ipl2) CoreTimerHandler(void)
 {
-    DBPRINTF("Interrupt Do\n");
-    if (flash_all)
-    {
-        // Start next iteration
-        UpdateCoreTimer(CORE_TICK_RATE);
-    }
+    DBPRINTF("Interrupt Do ");
 
-    if (flash_all || light_states[0])
-    {
-        DBPRINTF("Toggling lights from %d!\n", light_states[0]);
-        // Toggle the LEDs
-        mPORTDToggleBits(BIT_0 | BIT_1 | BIT_2);
+    switch (interrupt_mode) {
 
-        int i;
-        if (light_states[0]) //Assuming that if A is on, B and C are too
-        {
-            for (i = 0; i < 3; i++)
+        // case for doing nothing
+        case 0 : 
+            DBPRINTF("...nothing\n");
+            break;
+            
+        // case for flashing mode
+        case 1 :
+
+            DBPRINTF("...for flashing mode\n");
+            if (flash_all)
             {
-                light_states[i] = 0;
+                // Start next iteration
+                UpdateCoreTimer(CORE_TICK_RATE);
             }
-        }
-        else
-        {
-            for (i = 0; i < 3; i++)
-            {
-                light_states[i] = 1;
-            }
-        }
-    }
 
-    //Clear interrupt flag
-    mCTClearIntFlag();
+            if (flash_all || light_states[0])
+            {
+                DBPRINTF("Toggling lights from %d!\n", light_states[0]);
+                // Toggle the LEDs
+                mPORTDToggleBits(BIT_0 | BIT_1 | BIT_2);
+
+                int i;
+                if (light_states[0]) //Assuming that if A is on, B and C are too
+                    //Line for each state, off if on, on if off
+                {
+                    for (i = 0; i < 3; i++)
+                    {
+                        light_states[i] = 0;
+                    }
+                }
+                else
+                {
+                    for (i = 0; i < 3; i++)
+                    {
+                        light_states[i] = 1;
+                    }
+                }
+            }
+
+            //Clear interrupt flag
+            mCTClearIntFlag();
+            break;
+
+        // case for yellow-red
+        case 2 :
+            DBPRINTF("...going from yellow to red\n");
+            // TODO
+
+
+
+            break;
+
+        // case for going from red back to green
+        case 3 :
+            DBPRINTF("...going back to green after a delay\n");
+            // TODO
+
+
+
+            break;
+
+    }
 }
