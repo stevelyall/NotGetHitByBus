@@ -24,7 +24,7 @@
 
 //  The following is used by the main application
 #define SYS_FREQ		(80000000)
-#define TOGGLES_PER_SEC			2
+#define TOGGLES_PER_SEC			7
 #define FLASH_RATE	        (SYS_FREQ/TOGGLES_PER_SEC)
 
 // IOPORT bit masks can be found in ports.h
@@ -36,6 +36,7 @@
 //0 -> Bottom, 1 -> Middle, 2 -> Top
 //0 -> Red,    1 -> Yellow, 2 -> Green
 unsigned int button_states[3]; //0: pressed 1: unpressed
+unsigned int button_bounce[3];
 unsigned int light_states[3]; //0: on 1: off
 unsigned int flash_all; //1: do 0: don't
 unsigned int green_mode; //1: green light condition 0: not
@@ -54,6 +55,7 @@ void init()
     for (i = 0; i < 3; i++)
     {
         button_states[i] = 1;
+        button_bounce[i] = 0;
         light_states[i] = 0;
     }
 
@@ -188,16 +190,16 @@ void watchButtons()
     //Polling for button change
     while(1)
     {
- 
+        int i;
 
         // BUTTON A for green mode
         if(PORTDbits.RD13 == 0) // 0 = switch is pressed
         {
-            DBPRINTF("outertest pr\n");
-            if(button_states[0] == 1) //State just changed
+            if(button_states[0] == 1 && button_bounce[0] == 0) //State just changed
             {
                 button_states[0] = 0;
-                //DBPRINTF("Green button pressed\n");
+                button_bounce[0] = 300000;
+                DBPRINTF("Green button pressed\n");
                 if (flash_all) // lights are flashing, stop flashing and set green condition
                 {
                     greenModeOn();
@@ -215,10 +217,9 @@ void watchButtons()
         }
         else // 1 = switch is not pressed
         {
-            DBPRINTF("outertest unpr\n");
             if(button_states[0] == 0) //State just changed
             {
-                //DBPRINTF("BUTTON UNPRESSED YO\n");
+                DBPRINTF("BUTTON UNPRESSED YO\n");
                 button_states[0] = 1;
             }
         }
@@ -226,10 +227,12 @@ void watchButtons()
         // BUTTON B for yellow -> red -> green
         if(PORTDbits.RD7 == 0) // 0 = switch is pressed
         {
-            if(button_states[1] == 1) //State just changed
+            if(button_states[1] == 1 && button_bounce[1] == 0) //State just changed
             {
                 DBPRINTF("BUTTON B fa: %d|gm: %d\n", flash_all, green_mode);
                 button_states[1] = 0;
+                button_bounce[1] = 300000;
+                
                 if (flash_all)
                 {
                     DBPUTS("No crossing while we're testing, Billy\n");
@@ -243,7 +246,7 @@ void watchButtons()
 
                     interrupt_mode = 2; // interrupt handler for green to yellow
                     //set core timer
-                    OpenCoreTimer(FLASH_RATE/2);
+                    OpenCoreTimer(FLASH_RATE*2);
                     mConfigIntCoreTimer((CT_INT_ON | CT_INT_PRIOR_2 | CT_INT_SUB_PRIOR_0));
 
                 }
@@ -265,9 +268,11 @@ void watchButtons()
         // BUTTON C for flashing
         if(PORTDbits.RD6 == 0) // 0 = switch is pressed
         {
-            if(button_states[2] == 1) //State just changed
+            if(button_states[2] == 1 && button_bounce[2] == 0) //State just changed
             {
                 button_states[2] = 0;
+                button_bounce[2] = 300000;
+                
                 if (flash_all)
                 {
                     stopFlashing();
@@ -285,6 +290,13 @@ void watchButtons()
                 button_states[2] = 1;
             }
         }
+
+        for (i = 0; i < 3; i++)
+            if (button_bounce[i] > 0)
+                button_bounce[i]--;
+
+       // if (button_bounce[0] != 0 && button_bounce[0] % 10 == 0)
+            //DBPRINTF("is|%d\n", button_bounce[0]);
     };
 }
 
@@ -365,7 +377,7 @@ void __ISR(_CORE_TIMER_VECTOR, ipl2) CoreTimerHandler(void)
             //CloseCoreTimer();
             interrupt_mode = 3;
             //set core timer for next mode
-            UpdateCoreTimer(FLASH_RATE);
+            UpdateCoreTimer(FLASH_RATE*5);
             //mConfigIntCoreTimer((CT_INT_ON | CT_INT_PRIOR_2 | CT_INT_SUB_PRIOR_0));
             
 
@@ -381,7 +393,7 @@ void __ISR(_CORE_TIMER_VECTOR, ipl2) CoreTimerHandler(void)
             DBPRINTF("Gone red yo\n");
             interrupt_mode = 4;
             //set core timer for next mode
-            UpdateCoreTimer(FLASH_RATE*2);
+            UpdateCoreTimer(FLASH_RATE*10);
             
             break;
 
