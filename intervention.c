@@ -95,7 +95,7 @@ void init()
 
 void startFlashing()
 {
-    DBPRINTF("Start flashing!\n"); //DBPRINTF should be working
+    //DBPRINTF("Start flashing!\n"); //DBPRINTF should be working
     // set flashing mode and interrupt handler for do flashing
     flash_all = 1;
     interrupt_mode = 1;
@@ -106,7 +106,7 @@ void startFlashing()
 
 void stopFlashing()
 {
-    DBPRINTF("Stop flashing!\n");
+    //DBPRINTF("Stop flashing!\n");
     flash_all = 0;
 
      //Assuming that if A is on, B and C are too
@@ -145,7 +145,7 @@ void greenModeOn() {
     PORTClearBits(IOPORT_D, BIT_0);
     light_states[2] = 0;
 
-    DBPRINTF("Green light mode on\n");
+    //DBPRINTF("Green light mode on\n");
 }
 
 void greenModeOff() {
@@ -162,7 +162,7 @@ void greenModeOff() {
           PORTClearBits(IOPORT_D, BIT_1);
           PORTClearBits(IOPORT_D, BIT_2);
 
-    DBPRINTF("Green light mode off\n");
+    //DBPRINTF("Green light mode off\n");
 }
 
 // turns green off and yellow on
@@ -199,7 +199,7 @@ void watchButtons()
             {
                 button_states[0] = 0;
                 button_bounce[0] = 300000;
-                DBPRINTF("Green button pressed\n");
+                //DBPRINTF("Green button pressed\n");
                 if (flash_all) // lights are flashing, stop flashing and set green condition
                 {
                     greenModeOn();
@@ -219,7 +219,7 @@ void watchButtons()
         {
             if(button_states[0] == 0) //State just changed
             {
-                DBPRINTF("BUTTON UNPRESSED YO\n");
+                //DBPRINTF("BUTTON UNPRESSED YO\n");
                 button_states[0] = 1;
             }
         }
@@ -229,18 +229,18 @@ void watchButtons()
         {
             if(button_states[1] == 1 && button_bounce[1] == 0) //State just changed
             {
-                DBPRINTF("BUTTON B fa: %d|gm: %d\n", flash_all, green_mode);
+                //DBPRINTF("BUTTON B fa: %d|gm: %d\n", flash_all, green_mode);
                 button_states[1] = 0;
                 button_bounce[1] = 300000;
                 
                 if (flash_all)
                 {
-                    DBPUTS("No crossing while we're testing, Billy\n");
+                    //DBPUTS("No crossing while we're testing, Billy\n");
                     // don't do anything if lights are flashing
                 }
                 else if (green_mode) // begin change cycle from green mode
                 {
-                    DBPUTS("Change from green to yellow\n");
+                    //DBPUTS("Change from green to yellow\n");
                     //greenModeOff();
                     green_mode = 0;
 
@@ -250,11 +250,6 @@ void watchButtons()
                     mConfigIntCoreTimer((CT_INT_ON | CT_INT_PRIOR_2 | CT_INT_SUB_PRIOR_0));
 
                 }
-                //else // not flashing, not green mode
-                //{
-                    //DBPUTS("Not green, WTF flash mode\n");
-                    //startFlashing();
-                //}
             }
         }
         else // 1 = switch is not pressed
@@ -294,9 +289,6 @@ void watchButtons()
         for (i = 0; i < 3; i++)
             if (button_bounce[i] > 0)
                 button_bounce[i]--;
-
-       // if (button_bounce[0] != 0 && button_bounce[0] % 10 == 0)
-            //DBPRINTF("is|%d\n", button_bounce[0]);
     };
 }
 
@@ -323,10 +315,7 @@ void __ISR(_CORE_TIMER_VECTOR, ipl2) CoreTimerHandler(void)
 
     switch (interrupt_mode) {
 
-        // 0: null interrupt handler
-        case 0 : 
-            DBPRINTF("...nothing\n");
-            break;
+        // 0: nothing should be happening, see default state
             
         // 1: interrupt handler for flashing mode
         case 1 :
@@ -340,7 +329,7 @@ void __ISR(_CORE_TIMER_VECTOR, ipl2) CoreTimerHandler(void)
 
             if (flash_all || light_states[0])
             {
-                DBPRINTF("Toggling lights from %d!\n", light_states[0]);
+                //DBPRINTF("Toggling lights from %d!\n", light_states[0]);
                 // Toggle the LEDs
                 mPORTDToggleBits(BIT_0 | BIT_1 | BIT_2);
 
@@ -369,10 +358,10 @@ void __ISR(_CORE_TIMER_VECTOR, ipl2) CoreTimerHandler(void)
 
         // 2: interrupt handler for green -> yellow
         case 2 :
-            DBPRINTF("... going from green to yellow\n");
+            //DBPRINTF("... going from green to yellow\n");
             chgGreenToYellow();
             
-            DBPRINTF("Gone yellow yo\n");
+            //DBPRINTF("Gone yellow yo\n");
 
             //CloseCoreTimer();
             interrupt_mode = 3;
@@ -387,10 +376,10 @@ void __ISR(_CORE_TIMER_VECTOR, ipl2) CoreTimerHandler(void)
 
         // 3: interrupt handler for yellow -> red
         case 3 :
-            DBPRINTF("...going from yellow to red\n");
+            //DBPRINTF("...going from yellow to red\n");
             chgYellowToRed();
             
-            DBPRINTF("Gone red yo\n");
+            //DBPRINTF("Gone red yo\n");
             interrupt_mode = 4;
             //set core timer for next mode
             UpdateCoreTimer(FLASH_RATE*10);
@@ -399,9 +388,12 @@ void __ISR(_CORE_TIMER_VECTOR, ipl2) CoreTimerHandler(void)
 
         // 4: interrupt handler for red -> green
         case 4 :
-            DBPRINTF("...going from red to green\n");
             greenModeOn();
-            DBPRINTF("Gone green yo\n");
+            //DBPRINTF("Gone green yo\n");
+            break;
+        default:
+            DBPRINTF("Why did a interrupt do?\n");
+
      }
 
     mCTClearIntFlag();
