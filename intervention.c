@@ -24,7 +24,7 @@
 
 //  The following is used by the main application
 #define SYS_FREQ		(80000000)
-#define TOGGLES_PER_SEC			7
+#define TOGGLES_PER_SEC			2
 #define FLASH_RATE	        (SYS_FREQ/TOGGLES_PER_SEC)
 
 // IOPORT bit masks can be found in ports.h
@@ -179,7 +179,7 @@ void chgYellowToRed() {
     PORTClearBits(IOPORT_D, BIT_1);
     light_states[1] = 0;
     // turn red LED ON
-    PORTSetBits(IOPORT_D, BIT_2);
+    PORTSetBits(IOPORT_D, BIT_0);
     light_states[2] = 1;
 }
 
@@ -193,10 +193,11 @@ void watchButtons()
         // BUTTON A for green mode
         if(PORTDbits.RD13 == 0) // 0 = switch is pressed
         {
+            DBPRINTF("outertest pr\n");
             if(button_states[0] == 1) //State just changed
             {
                 button_states[0] = 0;
-                DBPRINTF("Green button pressed\n");
+                //DBPRINTF("Green button pressed\n");
                 if (flash_all) // lights are flashing, stop flashing and set green condition
                 {
                     greenModeOn();
@@ -214,9 +215,10 @@ void watchButtons()
         }
         else // 1 = switch is not pressed
         {
+            DBPRINTF("outertest unpr\n");
             if(button_states[0] == 0) //State just changed
             {
-                DBPRINTF("BUTTON UNPRESSED YO\n");
+                //DBPRINTF("BUTTON UNPRESSED YO\n");
                 button_states[0] = 1;
             }
         }
@@ -226,6 +228,7 @@ void watchButtons()
         {
             if(button_states[1] == 1) //State just changed
             {
+                DBPRINTF("BUTTON B fa: %d|gm: %d\n", flash_all, green_mode);
                 button_states[1] = 0;
                 if (flash_all)
                 {
@@ -235,7 +238,8 @@ void watchButtons()
                 else if (green_mode) // begin change cycle from green mode
                 {
                     DBPUTS("Change from green to yellow\n");
-                    greenModeOff();
+                    //greenModeOff();
+                    green_mode = 0;
 
                     interrupt_mode = 2; // interrupt handler for green to yellow
                     //set core timer
@@ -243,11 +247,11 @@ void watchButtons()
                     mConfigIntCoreTimer((CT_INT_ON | CT_INT_PRIOR_2 | CT_INT_SUB_PRIOR_0));
 
                 }
-                else // not flashing, not green mode
-                {
-                    DBPUTS("Not green, WTF flash mode\n");
-                    startFlashing();
-                }
+                //else // not flashing, not green mode
+                //{
+                    //DBPUTS("Not green, WTF flash mode\n");
+                    //startFlashing();
+                //}
             }
         }
         else // 1 = switch is not pressed
@@ -303,7 +307,7 @@ int main(void)
 ******************************************************************************/
 void __ISR(_CORE_TIMER_VECTOR, ipl2) CoreTimerHandler(void)
 {
-    DBPRINTF("Interrupt Do\n");
+    //DBPRINTF("Interrupt Do\n");
 
     switch (interrupt_mode) {
 
@@ -315,7 +319,7 @@ void __ISR(_CORE_TIMER_VECTOR, ipl2) CoreTimerHandler(void)
         // 1: interrupt handler for flashing mode
         case 1 :
 
-            DBPRINTF("...for flashing mode\n");
+           // DBPRINTF("...for flashing mode\n");
             if (flash_all)
             {
                 // Start next iteration
@@ -347,7 +351,7 @@ void __ISR(_CORE_TIMER_VECTOR, ipl2) CoreTimerHandler(void)
             }
 
             //Clear interrupt flag
-            mCTClearIntFlag();
+            //mCTClearIntFlag();
             break;
 
 
@@ -358,11 +362,11 @@ void __ISR(_CORE_TIMER_VECTOR, ipl2) CoreTimerHandler(void)
             
             DBPRINTF("Gone yellow yo\n");
 
-            CloseCoreTimer();
+            //CloseCoreTimer();
             interrupt_mode = 3;
             //set core timer for next mode
-            OpenCoreTimer(FLASH_RATE/2);
-            mConfigIntCoreTimer((CT_INT_ON | CT_INT_PRIOR_2 | CT_INT_SUB_PRIOR_0));
+            UpdateCoreTimer(FLASH_RATE);
+            //mConfigIntCoreTimer((CT_INT_ON | CT_INT_PRIOR_2 | CT_INT_SUB_PRIOR_0));
             
 
 
@@ -375,16 +379,10 @@ void __ISR(_CORE_TIMER_VECTOR, ipl2) CoreTimerHandler(void)
             chgYellowToRed();
             
             DBPRINTF("Gone red yo\n");
-            
-            CloseCoreTimer();
             interrupt_mode = 4;
             //set core timer for next mode
-            OpenCoreTimer(80000);
-            mConfigIntCoreTimer((CT_INT_ON | CT_INT_PRIOR_2 | CT_INT_SUB_PRIOR_0));
+            UpdateCoreTimer(FLASH_RATE*2);
             
-
-
-
             break;
 
         // 4: interrupt handler for red -> green
@@ -393,4 +391,6 @@ void __ISR(_CORE_TIMER_VECTOR, ipl2) CoreTimerHandler(void)
             greenModeOn();
             DBPRINTF("Gone green yo\n");
      }
+
+    mCTClearIntFlag();
 }
