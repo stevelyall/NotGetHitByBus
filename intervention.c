@@ -25,7 +25,7 @@
 //  The following is used by the main application
 #define SYS_FREQ		(80000000)
 #define TOGGLES_PER_SEC			7
-#define CORE_TICK_RATE	        (SYS_FREQ/TOGGLES_PER_SEC)
+#define FLASH_RATE	        (SYS_FREQ/TOGGLES_PER_SEC)
 
 // IOPORT bit masks can be found in ports.h
 #define CONFIG          (CN_ON)
@@ -42,9 +42,9 @@ unsigned int green_mode; //1: green light condition 0: not
 
 // 0: none
 // 1: interrupt handler for flashing mode
-// 2: interrupt handler for yellow-red
-// 3: interrupt handler for red-green
-
+// 2: interrupt handler for green  -> yellow
+// 3: interrupt handler for yellow -> red
+// 4: interrupt handler for red    -> green
 unsigned int interrupt_mode; 
 
 void init()
@@ -82,7 +82,7 @@ void init()
     PORTSetPinsDigitalIn(IOPORT_D, BIT_6 | BIT_7 | BIT_13);
 
     // configure the core timer roll-over rate (100msec)
-    OpenCoreTimer(CORE_TICK_RATE);
+    OpenCoreTimer(FLASH_RATE);
 
     // set up the core timer interrupt with a prioirty of 2 and zero sub-priority
     mConfigIntCoreTimer((CT_INT_ON | CT_INT_PRIOR_2 | CT_INT_SUB_PRIOR_0));
@@ -98,7 +98,7 @@ void startFlashing()
     flash_all = 1;
     interrupt_mode = 1;
     greenModeOff(); // turn green light mode off
-    OpenCoreTimer(CORE_TICK_RATE);
+    OpenCoreTimer(FLASH_RATE);
     mConfigIntCoreTimer((CT_INT_ON | CT_INT_PRIOR_2 | CT_INT_SUB_PRIOR_0));
 }
 
@@ -122,6 +122,7 @@ void stopFlashing()
           PORTClearBits(IOPORT_D, BIT_2);
      }
 }
+
 
 void greenModeOn() {
     CloseCoreTimer();
@@ -162,36 +163,34 @@ void greenModeOff() {
     DBPRINTF("Green light mode off\n");
 }
 
+// turns green off and yellow on
+void chgGreenToYellow() {
+    // turn GREEN LED OFF
+    PORTClearBits(IOPORT_D, BIT_2);
+    light_states[0] = 0;
+    // turn YELLOW LED ON
+    PORTSetBits(IOPORT_D, BIT_1);
+    light_states[1] = 1;
+}
+
+// turns yellow off and red on
+void chgYellowToRed() {
+    // turn yellow LED OFF
+    PORTClearBits(IOPORT_D, BIT_1);
+    light_states[1] = 0;
+    // turn red LED ON
+    PORTSetBits(IOPORT_D, BIT_2);
+    light_states[2] = 1;
+}
+
 void watchButtons()
 {
     //Polling for button change
     while(1)
     {
-        // BUTTON C
-        if(PORTDbits.RD6 == 0) // 0 = switch is pressed
-        {
-            if(button_states[2] == 1) //State just changed
-            {
-                button_states[2] = 0;
-                if (flash_all)
-                {
-                    stopFlashing();
-                }
-                else
-                {
-                    startFlashing();
-                }
-            }
-        }
-        else // 1 = switch is not pressed
-        {
-            if(button_states[2] == 0) //State just changed
-            {
-                button_states[2] = 1;
-            }
-        }
+ 
 
-        // BUTTON A
+        // BUTTON A for green mode
         if(PORTDbits.RD13 == 0) // 0 = switch is pressed
         {
             if(button_states[0] == 1) //State just changed
@@ -221,6 +220,67 @@ void watchButtons()
                 button_states[0] = 1;
             }
         }
+
+        // BUTTON B for yellow -> red -> green
+        if(PORTDbits.RD7 == 0) // 0 = switch is pressed
+        {
+            if(button_states[1] == 1) //State just changed
+            {
+                button_states[1] = 0;
+                if (flash_all)
+                {
+                    DBPUTS("No crossing while we're testing, Billy\n");
+                    // don't do anything if lights are flashing
+                }
+                else if (green_mode) // begin change cycle from green mode
+                {
+                    DBPUTS("Change from green to yellow\n");
+                    greenModeOff();
+
+                    interrupt_mode = 2; // interrupt handler for green to yellow
+                    //set core timer
+                    OpenCoreTimer(FLASH_RATE/2);
+                    mConfigIntCoreTimer((CT_INT_ON | CT_INT_PRIOR_2 | CT_INT_SUB_PRIOR_0));
+
+                }
+                else // not flashing, not green mode
+                {
+                    DBPUTS("Not green, WTF flash mode\n");
+                    startFlashing();
+                }
+            }
+        }
+        else // 1 = switch is not pressed
+        {
+            if(button_states[1] == 0) //State just changed
+            {
+                button_states[1] = 1;
+            }
+        }
+
+        // BUTTON C for flashing
+        if(PORTDbits.RD6 == 0) // 0 = switch is pressed
+        {
+            if(button_states[2] == 1) //State just changed
+            {
+                button_states[2] = 0;
+                if (flash_all)
+                {
+                    stopFlashing();
+                }
+                else
+                {
+                    startFlashing();
+                }
+            }
+        }
+        else // 1 = switch is not pressed
+        {
+            if(button_states[2] == 0) //State just changed
+            {
+                button_states[2] = 1;
+            }
+        }
     };
 }
 
@@ -247,19 +307,19 @@ void __ISR(_CORE_TIMER_VECTOR, ipl2) CoreTimerHandler(void)
 
     switch (interrupt_mode) {
 
-        // case for doing nothing
+        // 0: null interrupt handler
         case 0 : 
             DBPRINTF("...nothing\n");
             break;
             
-        // case for flashing mode
+        // 1: interrupt handler for flashing mode
         case 1 :
 
             DBPRINTF("...for flashing mode\n");
             if (flash_all)
             {
                 // Start next iteration
-                UpdateCoreTimer(CORE_TICK_RATE);
+                UpdateCoreTimer(FLASH_RATE);
             }
 
             if (flash_all || light_states[0])
@@ -290,23 +350,47 @@ void __ISR(_CORE_TIMER_VECTOR, ipl2) CoreTimerHandler(void)
             mCTClearIntFlag();
             break;
 
-        // case for yellow-red
+
+        // 2: interrupt handler for green -> yellow
         case 2 :
-            DBPRINTF("...going from yellow to red\n");
-            // TODO
+            DBPRINTF("... going from green to yellow\n");
+            chgGreenToYellow();
+            
+            DBPRINTF("Gone yellow yo\n");
+
+            CloseCoreTimer();
+            interrupt_mode = 3;
+            //set core timer for next mode
+            OpenCoreTimer(FLASH_RATE/2);
+            mConfigIntCoreTimer((CT_INT_ON | CT_INT_PRIOR_2 | CT_INT_SUB_PRIOR_0));
+            
 
 
-
+            
             break;
 
-        // case for going from red back to green
+        // 3: interrupt handler for yellow -> red
         case 3 :
-            DBPRINTF("...going back to green after a delay\n");
-            // TODO
+            DBPRINTF("...going from yellow to red\n");
+            chgYellowToRed();
+            
+            DBPRINTF("Gone red yo\n");
+            
+            CloseCoreTimer();
+            interrupt_mode = 4;
+            //set core timer for next mode
+            OpenCoreTimer(80000);
+            mConfigIntCoreTimer((CT_INT_ON | CT_INT_PRIOR_2 | CT_INT_SUB_PRIOR_0));
+            
 
 
 
             break;
 
-    }
+        // 4: interrupt handler for red -> green
+        case 4 :
+            DBPRINTF("...going from red to green\n");
+            greenModeOn();
+            DBPRINTF("Gone green yo\n");
+     }
 }
