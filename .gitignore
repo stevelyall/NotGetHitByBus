@@ -1,1 +1,16 @@
 timer_interrupt - PIC32 Starter Kit.X/
+Makefile
+
+nbproject/configurations.xml
+
+*.mk
+
+*.properties
+
+*.bash
+build/
+dist/
+nbproject/
+timer_interrupt - PIC32 Starter Kit.X/Makefile
+dist/default/debug/NotGetHitByBus.debug.map
+dist/default/debug/NotGetHitByBus.debug.map
