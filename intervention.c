@@ -24,8 +24,10 @@
 
 //  The following is used by the main application
 #define SYS_FREQ		(80000000)
-#define TOGGLES_PER_SEC			7
-#define FLASH_RATE	        (SYS_FREQ/TOGGLES_PER_SEC)
+#define FLASH_RATE	        (SYS_FREQ/7)
+#define GREEN_TO_YEL_RATE       (SYS_FREQ*2/7)
+#define YEL_TO_RED_RATE	        (SYS_FREQ*5/7)
+#define RED_TO_GREEN_RATE       (SYS_FREQ*10/7)
 
 // IOPORT bit masks can be found in ports.h
 #define CONFIG          (CN_ON)
@@ -246,7 +248,7 @@ void watchButtons()
 
                     interrupt_mode = 2; // interrupt handler for green to yellow
                     //set core timer
-                    OpenCoreTimer(FLASH_RATE*2);
+                    OpenCoreTimer(GREEN_TO_YEL_RATE);
                     mConfigIntCoreTimer((CT_INT_ON | CT_INT_PRIOR_2 | CT_INT_SUB_PRIOR_0));
 
                 }
@@ -366,7 +368,7 @@ void __ISR(_CORE_TIMER_VECTOR, ipl2) CoreTimerHandler(void)
             //CloseCoreTimer();
             interrupt_mode = 3;
             //set core timer for next mode
-            UpdateCoreTimer(FLASH_RATE*5);
+            UpdateCoreTimer(YEL_TO_RED_RATE);
             //mConfigIntCoreTimer((CT_INT_ON | CT_INT_PRIOR_2 | CT_INT_SUB_PRIOR_0));
             
 
@@ -382,7 +384,7 @@ void __ISR(_CORE_TIMER_VECTOR, ipl2) CoreTimerHandler(void)
             //DBPRINTF("Gone red yo\n");
             interrupt_mode = 4;
             //set core timer for next mode
-            UpdateCoreTimer(FLASH_RATE*10);
+            UpdateCoreTimer(RED_TO_GREEN_RATE);
             
             break;
 
