@@ -1,5 +1,13 @@
-// Adds support for PIC32 Peripheral library functions and macros
+//========================================================================
+//                          NotGetHitByBus
+//  COMP2130-01                                           Mitchell Hentges                             
+//  Final Project                                             Steven Lyall                              
+//                                                            Nov 11, 2014
+//
+//========================================================================
 
+
+// PIC32 Peripheral library 
 #include <plib.h>
 
 
@@ -67,23 +75,19 @@ void init()
     DBINIT();
 
     // Configure the device for maximum performance, but do not change the PBDIV clock divisor.
-    // Given the options, this function will change the program Flash wait states,
-    // RAM wait state and enable prefetch cache, but will not change the PBDIV.
-    // The PBDIV value is already set via the pragma FPBDIV option above.
+    // Change the program Flash wait states,
     SYSTEMConfig(SYS_FREQ, SYS_CFG_WAIT_STATES | SYS_CFG_PCACHE);
 
-    // configure IOPORTS PORTD.RD0, RD1, RD2 as outputs (LEDs)
-    // could also use mPORTDSetPinsDigitalOut(BIT_6 | BIT_7);
+    // configure IOPORTS RD0, RD1, RD2 as outputs for LEDs (pins 72, 76, 77 on MCU)
     PORTSetPinsDigitalOut(IOPORT_D, BIT_0 | BIT_1 | BIT_2);
 
-    // initialize the port pins states = output low
+    // set initial state for LED bits to low
     PORTClearBits(IOPORT_D, BIT_0 | BIT_1 | BIT_2);
 
-    // PORTD.RD6, RD7, 13 as inputs (these are the switches)
-    // could also use mPORTDSetPinsDigitalIn(BIT_6 | BIT_7);
+    // configure RD6, RD7, 13 as inputs (switches, pins 83, 84, 80 on MCU)
     PORTSetPinsDigitalIn(IOPORT_D, BIT_6 | BIT_7 | BIT_13);
 
-    // configure the core timer roll-over rate (100msec)
+    // configure the core timer period (100msec) (see above)
     OpenCoreTimer(FLASH_RATE);
 
     // set up the core timer interrupt with a prioirty of 2 and zero sub-priority
@@ -95,7 +99,7 @@ void init()
 
 void startFlashing()
 {
-    //DBPRINTF("Start flashing!\n"); //DBPRINTF should be working
+    //DBPRINTF("Start flashing!\n");
     // set flashing mode and interrupt handler for do flashing
     flash_all = 1;
     interrupt_mode = 1;
@@ -299,23 +303,15 @@ int main(void)
     watchButtons();
 }
 
-/*
-* Makes all three lights flash
-******************************************************************************
-*	Change Notice Interrupt Service Routine
-*
-*   Note: Switch debouncing is not performed.
-*   Code comes here if SW2 (CN16) PORTD.RD7 is pressed or released.
-*   The user must read the IOPORT to clear the IO pin change notice mismatch
-*	condition first, then clear the change notice interrupt flag.
+/******************************************************************************
+* Makes all three lights flash 
+* Interrupt handler
 ******************************************************************************/
 void __ISR(_CORE_TIMER_VECTOR, ipl2) CoreTimerHandler(void)
 {
     //DBPRINTF("Interrupt Do\n");
 
     switch (interrupt_mode) {
-
-        // 0: nothing should be happening, see default state
             
         // 1: interrupt handler for flashing mode
         case 1 :
@@ -392,7 +388,7 @@ void __ISR(_CORE_TIMER_VECTOR, ipl2) CoreTimerHandler(void)
             //DBPRINTF("Gone green yo\n");
             break;
         default:
-            DBPRINTF("Why did a interrupt do?\n");
+            //DBPRINTF("Why did a interrupt do?\n");
 
      }
 
